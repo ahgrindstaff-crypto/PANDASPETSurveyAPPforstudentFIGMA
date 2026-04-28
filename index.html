@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PTEC Symptom Tracker</title>
+<style>
+
+/* ── Reset ───────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:#eef1ee;
+  color:#2c2c2a;
+  min-height:100dvh;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── Color Tokens ────────────────────────────────── */
+:root{
+  --t50:#E1F5EE;--t100:#9FE1CB;--t200:#5DCAA5;
+  --t400:#1D9E75;--t600:#0F6E56;--t800:#085041;
+  --a50:#FAEEDA;--a200:#EF9F27;--a800:#633806;
+  --p50:#EEEDFE;--p200:#AFA9EC;--p600:#534AB7;--p800:#3C3489;
+  --r50:#FCEBEB;--r200:#F09595;--r600:#A32D2D;
+  --g50:#F1EFE8;--g100:#D3D1C7;--g200:#B4B2A9;
+  --g400:#888780;--g600:#5F5E5A;--g800:#444441;--g900:#2C2C2A;
+}
+
+/* ── Screen System (CSS-only via :target) ────────── */
+.screen{
+  display:none;
+  flex-direction:column;
+  min-height:100dvh;
+  max-width:480px;
+  margin:0 auto;
+  background:#fff;
+  box-shadow:0 0 40px rgba(0,0,0,.09);
+  animation:fadeUp .22s ease both;
+}
+.screen:target{display:flex;}
+body:not(:has(.screen:target)) #s-welcome{display:flex;}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(8px);}
+  to{opacity:1;transform:none;}
+}
+
+/* ── Progress Bar ────────────────────────────────── */
+.prog-bar{height:4px;background:var(--g100);flex-shrink:0;}
+.prog-fill{height:100%;background:var(--t400);transition:width .3s ease;}
+
+/* ── Screen Body / Footer ────────────────────────── */
+.screen-body{
+  flex:1;
+  overflow-y:auto;
+  padding:28px 20px 12px;
+  -webkit-overflow-scrolling:touch;
+}
+.screen-body.centered{
+  display:flex;flex-direction:column;justify-content:center;
+}
+.screen-footer{
+  padding:14px 20px 32px;
+  border-top:1px solid var(--g100);
+  background:#fff;
+  flex-shrink:0;
+}
+.screen-footer.two-col{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+}
+
+/* ── Typography ──────────────────────────────────── */
+.overline{
+  font-size:11px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t600);margin-bottom:6px;
+}
+.title-xl{font-size:26px;font-weight:700;line-height:1.2;margin-bottom:6px;}
+.title-lg{font-size:20px;font-weight:700;line-height:1.3;margin-bottom:6px;}
+.body-sm{font-size:14px;color:var(--g600);line-height:1.6;}
+.hint{font-size:12px;color:var(--g400);margin-top:8px;}
+
+/* ── Welcome Icon ────────────────────────────────── */
+.welcome-icon{
+  width:60px;height:60px;
+  background:var(--t50);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:18px;
+}
+
+/* ── Section Chips ───────────────────────────────── */
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;}
+.chip{
+  font-size:11px;font-weight:600;
+  padding:4px 10px;border-radius:20px;
+  background:var(--g50);color:var(--g600);
+  border:1px solid var(--g100);
+}
+.chip.active{background:var(--t50);color:var(--t800);border-color:var(--t100);}
+.chip.done{background:var(--t600);color:#fff;border-color:var(--t600);}
+
+/* ── Buttons ─────────────────────────────────────── */
+.btn-primary{
+  display:block;width:100%;padding:14px;
+  background:var(--t600);color:#fff;border:none;
+  border-radius:12px;font-size:15px;font-weight:700;
+  cursor:pointer;text-align:center;
+  text-decoration:none;letter-spacing:.01em;
+  font-family:inherit;transition:background .15s;
+}
+.btn-primary:hover{background:var(--t800);}
+.btn-secondary{
+  display:block;width:100%;padding:14px;
+  background:transparent;color:var(--g800);
+  border:1px solid var(--g200);border-radius:12px;
+  font-size:15px;font-weight:700;cursor:pointer;
+  text-align:center;text-decoration:none;
+  font-family:inherit;transition:background .15s;
+}
+.btn-secondary:hover{background:var(--g50);}
+.btn-back{
+  display:inline-block;
+  font-size:13px;color:var(--g600);
+  text-decoration:none;padding:0 0 16px 0;
+  font-weight:600;
+}
+.btn-back:hover{color:var(--t600);}
+
+/* ── Impression Radio Options ────────────────────── */
+.imp-input{display:none;}
+.imp-label{
+  display:flex;align-items:center;gap:12px;
+  width:100%;padding:14px 16px;margin-bottom:8px;
+  background:#fff;border:1.5px solid var(--g100);
+  border-radius:12px;cursor:pointer;
+  font-size:14px;color:var(--g800);font-family:inherit;
+  transition:all .12s;
+}
+.imp-label:hover{background:var(--g50);border-color:var(--g200);}
+.radio-dot{
+  width:16px;height:16px;border-radius:50%;
+  border:2px solid var(--g200);flex-shrink:0;
+  transition:all .12s;
+}
+.imp-input:checked + .imp-label{
+  background:var(--t50);border-color:var(--t200);color:var(--t800);
+}
+.imp-input:checked + .imp-label .radio-dot{
+  background:var(--t600);border-color:var(--t600);
+  box-shadow:inset 0 0 0 3px #fff;
+}
+
+/* ── Rating Legend ───────────────────────────────── */
+.rating-legend{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;
+}
+.leg{
+  font-size:11px;font-weight:700;
+  padding:3px 9px;border-radius:20px;border:1px solid transparent;
+}
+.leg.np{background:var(--t50);color:var(--t800);border-color:var(--t100);}
+.leg.mn{background:var(--a50);color:var(--a800);border-color:var(--a200);}
+.leg.mo{background:var(--p50);color:var(--p800);border-color:var(--p200);}
+.leg.se{background:var(--r50);color:var(--r600);border-color:var(--r200);}
+
+/* ── Symptom Cards ───────────────────────────────── */
+.symptom-card{
+  background:var(--g50);border-radius:12px;
+  padding:14px;margin-bottom:10px;
+  border:1px solid var(--g100);
+}
+.symptom-name{
+  font-size:14px;font-weight:700;color:var(--g800);
+  margin-bottom:10px;line-height:1.3;
+}
+.rating-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+
+/* Hide actual radio inputs */
+.r-input{display:none;}
+
+/* Default label (rating button) style */
+.r-btn{
+  display:block;padding:8px 4px;
+  font-size:10px;font-weight:700;text-align:center;
+  border:1px solid var(--g100);border-radius:8px;
+  cursor:pointer;background:#fff;color:var(--g400);
+  font-family:inherit;line-height:1.3;
+  transition:all .1s;
+}
+.r-btn:hover{border-color:var(--g200);color:var(--g800);}
+
+/* Selected state via :checked + label */
+.r-input.r0:checked + .r-btn{background:var(--t50);border-color:var(--t200);color:var(--t800);}
+.r-input.r1:checked + .r-btn{background:var(--a50);border-color:var(--a200);color:var(--a800);}
+.r-input.r2:checked + .r-btn{background:var(--p50);border-color:var(--p200);color:var(--p800);}
+.r-input.r3:checked + .r-btn{background:var(--r50);border-color:var(--r200);color:var(--r600);}
+
+/* ── Completion Screen ───────────────────────────── */
+.complete-icon{
+  width:64px;height:64px;background:var(--t50);border-radius:32px;
+  display:flex;align-items:center;justify-content:center;margin-bottom:20px;
+}
+.complete-note{
+  background:var(--g50);border-radius:12px;
+  padding:16px;margin-top:20px;
+  font-size:13px;color:var(--g600);line-height:1.7;
+  border:1px solid var(--g100);
+}
+.complete-note strong{color:var(--g900);}
+
+/* ── Print View ──────────────────────────────────── */
+@media print{
+  body{background:#fff;}
+  .screen{
+    display:block!important;
+    min-height:auto;
+    box-shadow:none;
+    max-width:100%;
+    page-break-after:always;
+    border-bottom:2px solid #ccc;
+    padding-bottom:24px;
+    margin-bottom:24px;
+  }
+  .screen-footer,.btn-primary,.btn-secondary,.btn-back,
+  .prog-bar,.chip-row{display:none!important;}
+  .screen-body{overflow:visible;padding:16px;}
+  .r-btn{border:1px solid #ccc;font-size:9px;padding:5px 2px;}
+  .r-input.r0:checked + .r-btn{background:#E1F5EE;font-weight:900;}
+  .r-input.r1:checked + .r-btn{background:#FAEEDA;font-weight:900;}
+  .r-input.r2:checked + .r-btn{background:#EEEDFE;font-weight:900;}
+  .r-input.r3:checked + .r-btn{background:#FCEBEB;font-weight:900;}
+  .imp-label{padding:8px 12px;font-size:12px;}
+  .imp-input:checked + .imp-label{background:#E1F5EE;font-weight:700;}
+  .complete-icon,.complete-note{display:none!important;}
+}
+
+/* ── Desktop ─────────────────────────────────────── */
+@media(min-width:520px){
+  .screen{
+    margin:32px auto;
+    min-height:auto;
+    border-radius:24px;
+    overflow:hidden;
+  }
+  .screen-body{padding:32px 28px 16px;}
+  .screen-footer{padding:16px 28px 32px;}
+}
+
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     SCREEN 1 — WELCOME
+════════════════════════════════════════════ -->
+<div class="screen" id="s-welcome">
+  <div class="prog-bar"><div class="prog-fill" style="width:0%"></div></div>
+  <div class="screen-body centered">
+    <div class="welcome-icon">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+        <circle cx="15" cy="15" r="13" stroke="#0F6E56" stroke-width="1.5" fill="none"/>
+        <circle cx="15" cy="10" r="3" fill="#0F6E56"/>
+        <path d="M8 23c.04-3.3 3.1-4.8 7-4.8s6.96 1.5 7 4.8" stroke="#0F6E56" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+      </svg>
+    </div>
+    <p class="overline">PTEC</p>
+    <h1 class="title-xl">Symptom Tracking Survey</h1>
+    <p class="body-sm" style="margin:10px 0 22px;">
+      This survey helps track symptom severity for PANS, PANDAS, and related inflammatory brain disorders. Take your time — there are no right or wrong answers.
+    </p>
+    <div class="chip-row">
+      <span class="chip active">General impression</span>
+      <span class="chip">Behavior &amp; Mood</span>
+      <span class="chip">OCD</span>
+      <span class="chip">Anxiety</span>
+    </div>
+    <p class="hint">Estimated time: 5–10 minutes</p>
+  </div>
+  <div class="screen-footer">
+    <a href="#s-impression" class="btn-primary">Start Survey</a>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SCREEN 2 — GENERAL IMPRESSION
+════════════════════════════════════════════ -->
+<div class="screen" id="s-impression">
+  <div class="prog-bar"><div class="prog-fill" style="width:15%"></div></div>
+  <div class="screen-body">
+    <a href="#s-welcome" class="btn-back">← Back</a>
+    <div class="chip-row">
+      <span class="chip done">General impression</span>
+      <span class="chip">Behavior &amp; Mood</span>
+      <span class="chip">OCD</span>
+      <span class="chip">Anxiety</span>
+    </div>
+    <p class="overline">Section 1 of 4</p>
+    <h2 class="title-lg">General Impression</h2>
+    <p class="body-sm" style="margin-bottom:20px;">Since the last PTEC assessment, I / my child:</p>
+
+    <input class="imp-input" type="radio" name="impression" id="imp-0">
+    <label class="imp-label" for="imp-0"><div class="radio-dot"></div>Got much better</label>
+
+    <input class="imp-input" type="radio" name="impression" id="imp-1">
+    <label class="imp-label" for="imp-1"><div class="radio-dot"></div>Got a little better</label>
+
+    <input class="imp-input" type="radio" name="impression" id="imp-2">
+    <label class="imp-label" for="imp-2"><div class="radio-dot"></div>Remained the same</label>
+
+    <input class="imp-input" type="radio" name="impression" id="imp-3">
+    <label class="imp-label" for="imp-3"><div class="radio-dot"></div>Got a little worse</label>
+
+    <input class="imp-input" type="radio" name="impression" id="imp-4">
+    <label class="imp-label" for="imp-4"><div class="radio-dot"></div>Got much worse</label>
+  </div>
+  <div class="screen-footer">
+    <a href="#s-behavior" class="btn-primary">Next: Behavior &amp; Mood →</a>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SCREEN 3 — BEHAVIOR & MOOD
+════════════════════════════════════════════ -->
+<div class="screen" id="s-behavior">
+  <div class="prog-bar"><div class="prog-fill" style="width:35%"></div></div>
+  <div class="screen-body">
+    <a href="#s-impression" class="btn-back">← Back</a>
+    <div class="chip-row">
+      <span class="chip done">General impression</span>
+      <span class="chip active">Behavior &amp; Mood</span>
+      <span class="chip">OCD</span>
+      <span class="chip">Anxiety</span>
+    </div>
+    <p class="overline">Section 2 of 4</p>
+    <h2 class="title-lg">Behavior &amp; Mood</h2>
+    <p class="body-sm" style="margin-bottom:12px;">Rate how true each symptom is right now.</p>
+    <div class="rating-legend">
+      <span class="leg np">Not a problem</span>
+      <span class="leg mn">Minor</span>
+      <span class="leg mo">Moderate</span>
+      <span class="leg se">Serious</span>
+    </div>
+
+    <div class="symptom-card"><p class="symptom-name">Rages</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b0" id="b0-0"><label class="r-btn" for="b0-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b0" id="b0-1"><label class="r-btn" for="b0-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b0" id="b0-2"><label class="r-btn" for="b0-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b0" id="b0-3"><label class="r-btn" for="b0-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">School refusal</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b1" id="b1-0"><label class="r-btn" for="b1-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b1" id="b1-1"><label class="r-btn" for="b1-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b1" id="b1-2"><label class="r-btn" for="b1-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b1" id="b1-3"><label class="r-btn" for="b1-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Uncooperative or resistant</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b2" id="b2-0"><label class="r-btn" for="b2-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b2" id="b2-1"><label class="r-btn" for="b2-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b2" id="b2-2"><label class="r-btn" for="b2-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b2" id="b2-3"><label class="r-btn" for="b2-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Oppositional behavior</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b3" id="b3-0"><label class="r-btn" for="b3-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b3" id="b3-1"><label class="r-btn" for="b3-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b3" id="b3-2"><label class="r-btn" for="b3-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b3" id="b3-3"><label class="r-btn" for="b3-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Disagreeable / non-compliant</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b4" id="b4-0"><label class="r-btn" for="b4-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b4" id="b4-1"><label class="r-btn" for="b4-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b4" id="b4-2"><label class="r-btn" for="b4-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b4" id="b4-3"><label class="r-btn" for="b4-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Temper tantrums</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b5" id="b5-0"><label class="r-btn" for="b5-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b5" id="b5-1"><label class="r-btn" for="b5-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b5" id="b5-2"><label class="r-btn" for="b5-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b5" id="b5-3"><label class="r-btn" for="b5-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Shouts or screams</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b6" id="b6-0"><label class="r-btn" for="b6-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b6" id="b6-1"><label class="r-btn" for="b6-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b6" id="b6-2"><label class="r-btn" for="b6-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b6" id="b6-3"><label class="r-btn" for="b6-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Insensitive to others' feelings</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b7" id="b7-0"><label class="r-btn" for="b7-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b7" id="b7-1"><label class="r-btn" for="b7-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b7" id="b7-2"><label class="r-btn" for="b7-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b7" id="b7-3"><label class="r-btn" for="b7-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Inappropriate laughing / crying</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b8" id="b8-0"><label class="r-btn" for="b8-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b8" id="b8-1"><label class="r-btn" for="b8-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b8" id="b8-2"><label class="r-btn" for="b8-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b8" id="b8-3"><label class="r-btn" for="b8-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Disinhibited / impulsive</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b9" id="b9-0"><label class="r-btn" for="b9-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b9" id="b9-1"><label class="r-btn" for="b9-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b9" id="b9-2"><label class="r-btn" for="b9-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b9" id="b9-3"><label class="r-btn" for="b9-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Avoids contact with others</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b10" id="b10-0"><label class="r-btn" for="b10-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b10" id="b10-1"><label class="r-btn" for="b10-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b10" id="b10-2"><label class="r-btn" for="b10-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b10" id="b10-3"><label class="r-btn" for="b10-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Harms self</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b11" id="b11-0"><label class="r-btn" for="b11-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b11" id="b11-1"><label class="r-btn" for="b11-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b11" id="b11-2"><label class="r-btn" for="b11-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b11" id="b11-3"><label class="r-btn" for="b11-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Irritable / agitated</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b12" id="b12-0"><label class="r-btn" for="b12-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b12" id="b12-1"><label class="r-btn" for="b12-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b12" id="b12-2"><label class="r-btn" for="b12-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b12" id="b12-3"><label class="r-btn" for="b12-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Destructive to property</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b13" id="b13-0"><label class="r-btn" for="b13-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b13" id="b13-1"><label class="r-btn" for="b13-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b13" id="b13-2"><label class="r-btn" for="b13-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b13" id="b13-3"><label class="r-btn" for="b13-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Verbal aggression</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b14" id="b14-0"><label class="r-btn" for="b14-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b14" id="b14-1"><label class="r-btn" for="b14-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b14" id="b14-2"><label class="r-btn" for="b14-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b14" id="b14-3"><label class="r-btn" for="b14-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Physical aggression</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b15" id="b15-0"><label class="r-btn" for="b15-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b15" id="b15-1"><label class="r-btn" for="b15-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b15" id="b15-2"><label class="r-btn" for="b15-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b15" id="b15-3"><label class="r-btn" for="b15-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Unhappy / crying</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b16" id="b16-0"><label class="r-btn" for="b16-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b16" id="b16-1"><label class="r-btn" for="b16-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b16" id="b16-2"><label class="r-btn" for="b16-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b16" id="b16-3"><label class="r-btn" for="b16-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Depressed mood</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b17" id="b17-0"><label class="r-btn" for="b17-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b17" id="b17-1"><label class="r-btn" for="b17-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b17" id="b17-2"><label class="r-btn" for="b17-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b17" id="b17-3"><label class="r-btn" for="b17-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">No motivation / joy</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b18" id="b18-0"><label class="r-btn" for="b18-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b18" id="b18-1"><label class="r-btn" for="b18-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b18" id="b18-2"><label class="r-btn" for="b18-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b18" id="b18-3"><label class="r-btn" for="b18-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Mood swings</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="b19" id="b19-0"><label class="r-btn" for="b19-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="b19" id="b19-1"><label class="r-btn" for="b19-1">Minor</label>
+      <input class="r-input r2" type="radio" name="b19" id="b19-2"><label class="r-btn" for="b19-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="b19" id="b19-3"><label class="r-btn" for="b19-3">Serious</label>
+    </div></div>
+
+  </div>
+  <div class="screen-footer">
+    <a href="#s-ocd" class="btn-primary">Next: OCD →</a>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SCREEN 4 — OCD
+════════════════════════════════════════════ -->
+<div class="screen" id="s-ocd">
+  <div class="prog-bar"><div class="prog-fill" style="width:60%"></div></div>
+  <div class="screen-body">
+    <a href="#s-behavior" class="btn-back">← Back</a>
+    <div class="chip-row">
+      <span class="chip done">General impression</span>
+      <span class="chip done">Behavior &amp; Mood</span>
+      <span class="chip active">OCD</span>
+      <span class="chip">Anxiety</span>
+    </div>
+    <p class="overline">Section 3 of 4</p>
+    <h2 class="title-lg">OCD Symptoms</h2>
+    <p class="body-sm" style="margin-bottom:12px;">Rate how true each symptom is right now.</p>
+    <div class="rating-legend">
+      <span class="leg np">Not a problem</span>
+      <span class="leg mn">Minor</span>
+      <span class="leg mo">Moderate</span>
+      <span class="leg se">Serious</span>
+    </div>
+
+    <div class="symptom-card"><p class="symptom-name">Unwanted sexual thoughts</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o0" id="o0-0"><label class="r-btn" for="o0-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o0" id="o0-1"><label class="r-btn" for="o0-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o0" id="o0-2"><label class="r-btn" for="o0-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o0" id="o0-3"><label class="r-btn" for="o0-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Violent / horrific intrusive images</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o1" id="o1-0"><label class="r-btn" for="o1-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o1" id="o1-1"><label class="r-btn" for="o1-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o1" id="o1-2"><label class="r-btn" for="o1-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o1" id="o1-3"><label class="r-btn" for="o1-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Non-violent intrusive thoughts</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o2" id="o2-0"><label class="r-btn" for="o2-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o2" id="o2-1"><label class="r-btn" for="o2-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o2" id="o2-2"><label class="r-btn" for="o2-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o2" id="o2-3"><label class="r-btn" for="o2-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Obsession / fear of germs</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o3" id="o3-0"><label class="r-btn" for="o3-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o3" id="o3-1"><label class="r-btn" for="o3-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o3" id="o3-2"><label class="r-btn" for="o3-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o3" id="o3-3"><label class="r-btn" for="o3-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Washing / cleaning compulsions</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o4" id="o4-0"><label class="r-btn" for="o4-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o4" id="o4-1"><label class="r-btn" for="o4-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o4" id="o4-2"><label class="r-btn" for="o4-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o4" id="o4-3"><label class="r-btn" for="o4-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Fear of chemicals / contaminants</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o5" id="o5-0"><label class="r-btn" for="o5-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o5" id="o5-1"><label class="r-btn" for="o5-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o5" id="o5-2"><label class="r-btn" for="o5-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o5" id="o5-3"><label class="r-btn" for="o5-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Fears harm will come to self</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o6" id="o6-0"><label class="r-btn" for="o6-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o6" id="o6-1"><label class="r-btn" for="o6-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o6" id="o6-2"><label class="r-btn" for="o6-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o6" id="o6-3"><label class="r-btn" for="o6-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Fears hurting self / others</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o7" id="o7-0"><label class="r-btn" for="o7-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o7" id="o7-1"><label class="r-btn" for="o7-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o7" id="o7-2"><label class="r-btn" for="o7-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o7" id="o7-3"><label class="r-btn" for="o7-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Fears responsibility for illegal behavior</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o8" id="o8-0"><label class="r-btn" for="o8-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o8" id="o8-1"><label class="r-btn" for="o8-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o8" id="o8-2"><label class="r-btn" for="o8-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o8" id="o8-3"><label class="r-btn" for="o8-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Fear of blurting obscenities</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o9" id="o9-0"><label class="r-btn" for="o9-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o9" id="o9-1"><label class="r-btn" for="o9-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o9" id="o9-2"><label class="r-btn" for="o9-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o9" id="o9-3"><label class="r-btn" for="o9-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Perfectionism</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o10" id="o10-0"><label class="r-btn" for="o10-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o10" id="o10-1"><label class="r-btn" for="o10-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o10" id="o10-2"><label class="r-btn" for="o10-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o10" id="o10-3"><label class="r-btn" for="o10-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Checking or repeating rituals</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o11" id="o11-0"><label class="r-btn" for="o11-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o11" id="o11-1"><label class="r-btn" for="o11-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o11" id="o11-2"><label class="r-btn" for="o11-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o11" id="o11-3"><label class="r-btn" for="o11-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Counting rituals</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o12" id="o12-0"><label class="r-btn" for="o12-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o12" id="o12-1"><label class="r-btn" for="o12-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o12" id="o12-2"><label class="r-btn" for="o12-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o12" id="o12-3"><label class="r-btn" for="o12-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Confessing</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o13" id="o13-0"><label class="r-btn" for="o13-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o13" id="o13-1"><label class="r-btn" for="o13-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o13" id="o13-2"><label class="r-btn" for="o13-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o13" id="o13-3"><label class="r-btn" for="o13-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Reassurance seeking</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o14" id="o14-0"><label class="r-btn" for="o14-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o14" id="o14-1"><label class="r-btn" for="o14-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o14" id="o14-2"><label class="r-btn" for="o14-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o14" id="o14-3"><label class="r-btn" for="o14-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Obsessive / repetitive speech</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o15" id="o15-0"><label class="r-btn" for="o15-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o15" id="o15-1"><label class="r-btn" for="o15-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o15" id="o15-2"><label class="r-btn" for="o15-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o15" id="o15-3"><label class="r-btn" for="o15-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Rigid routines</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o16" id="o16-0"><label class="r-btn" for="o16-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o16" id="o16-1"><label class="r-btn" for="o16-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o16" id="o16-2"><label class="r-btn" for="o16-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o16" id="o16-3"><label class="r-btn" for="o16-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Hoarding rituals</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o17" id="o17-0"><label class="r-btn" for="o17-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o17" id="o17-1"><label class="r-btn" for="o17-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o17" id="o17-2"><label class="r-btn" for="o17-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o17" id="o17-3"><label class="r-btn" for="o17-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Magical thoughts / superstitions</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o18" id="o18-0"><label class="r-btn" for="o18-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o18" id="o18-1"><label class="r-btn" for="o18-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o18" id="o18-2"><label class="r-btn" for="o18-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o18" id="o18-3"><label class="r-btn" for="o18-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Lucky / unlucky words, numbers, or colors</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o19" id="o19-0"><label class="r-btn" for="o19-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o19" id="o19-1"><label class="r-btn" for="o19-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o19" id="o19-2"><label class="r-btn" for="o19-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o19" id="o19-3"><label class="r-btn" for="o19-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Requires symmetry / arranging</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o20" id="o20-0"><label class="r-btn" for="o20-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o20" id="o20-1"><label class="r-btn" for="o20-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o20" id="o20-2"><label class="r-btn" for="o20-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o20" id="o20-3"><label class="r-btn" for="o20-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Obsession with order / location</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o21" id="o21-0"><label class="r-btn" for="o21-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o21" id="o21-1"><label class="r-btn" for="o21-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o21" id="o21-2"><label class="r-btn" for="o21-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o21" id="o21-3"><label class="r-btn" for="o21-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Need to tap or touch</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o22" id="o22-0"><label class="r-btn" for="o22-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o22" id="o22-1"><label class="r-btn" for="o22-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o22" id="o22-2"><label class="r-btn" for="o22-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o22" id="o22-3"><label class="r-btn" for="o22-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Overly concerned with health</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o23" id="o23-0"><label class="r-btn" for="o23-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o23" id="o23-1"><label class="r-btn" for="o23-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o23" id="o23-2"><label class="r-btn" for="o23-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o23" id="o23-3"><label class="r-btn" for="o23-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Requires others to participate in OCD</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="o24" id="o24-0"><label class="r-btn" for="o24-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="o24" id="o24-1"><label class="r-btn" for="o24-1">Minor</label>
+      <input class="r-input r2" type="radio" name="o24" id="o24-2"><label class="r-btn" for="o24-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="o24" id="o24-3"><label class="r-btn" for="o24-3">Serious</label>
+    </div></div>
+
+  </div>
+  <div class="screen-footer">
+    <a href="#s-anxiety" class="btn-primary">Next: Anxiety →</a>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SCREEN 5 — ANXIETY
+════════════════════════════════════════════ -->
+<div class="screen" id="s-anxiety">
+  <div class="prog-bar"><div class="prog-fill" style="width:85%"></div></div>
+  <div class="screen-body">
+    <a href="#s-ocd" class="btn-back">← Back</a>
+    <div class="chip-row">
+      <span class="chip done">General impression</span>
+      <span class="chip done">Behavior &amp; Mood</span>
+      <span class="chip done">OCD</span>
+      <span class="chip active">Anxiety</span>
+    </div>
+    <p class="overline">Section 4 of 4</p>
+    <h2 class="title-lg">Anxiety</h2>
+    <p class="body-sm" style="margin-bottom:12px;">Rate how true each symptom is right now.</p>
+    <div class="rating-legend">
+      <span class="leg np">Not a problem</span>
+      <span class="leg mn">Minor</span>
+      <span class="leg mo">Moderate</span>
+      <span class="leg se">Serious</span>
+    </div>
+
+    <div class="symptom-card"><p class="symptom-name">Separation anxiety</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="a0" id="a0-0"><label class="r-btn" for="a0-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="a0" id="a0-1"><label class="r-btn" for="a0-1">Minor</label>
+      <input class="r-input r2" type="radio" name="a0" id="a0-2"><label class="r-btn" for="a0-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="a0" id="a0-3"><label class="r-btn" for="a0-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Irrational or amplified fears</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="a1" id="a1-0"><label class="r-btn" for="a1-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="a1" id="a1-1"><label class="r-btn" for="a1-1">Minor</label>
+      <input class="r-input r2" type="radio" name="a1" id="a1-2"><label class="r-btn" for="a1-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="a1" id="a1-3"><label class="r-btn" for="a1-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Avoids leaving home</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="a2" id="a2-0"><label class="r-btn" for="a2-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="a2" id="a2-1"><label class="r-btn" for="a2-1">Minor</label>
+      <input class="r-input r2" type="radio" name="a2" id="a2-2"><label class="r-btn" for="a2-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="a2" id="a2-3"><label class="r-btn" for="a2-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">Anxious about being around people</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="a3" id="a3-0"><label class="r-btn" for="a3-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="a3" id="a3-1"><label class="r-btn" for="a3-1">Minor</label>
+      <input class="r-input r2" type="radio" name="a3" id="a3-2"><label class="r-btn" for="a3-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="a3" id="a3-3"><label class="r-btn" for="a3-3">Serious</label>
+    </div></div>
+
+    <div class="symptom-card"><p class="symptom-name">General / other anxiety</p><div class="rating-row">
+      <input class="r-input r0" type="radio" name="a4" id="a4-0"><label class="r-btn" for="a4-0">Not a problem</label>
+      <input class="r-input r1" type="radio" name="a4" id="a4-1"><label class="r-btn" for="a4-1">Minor</label>
+      <input class="r-input r2" type="radio" name="a4" id="a4-2"><label class="r-btn" for="a4-2">Moderate</label>
+      <input class="r-input r3" type="radio" name="a4" id="a4-3"><label class="r-btn" for="a4-3">Serious</label>
+    </div></div>
+
+  </div>
+  <div class="screen-footer">
+    <a href="#s-complete" class="btn-primary">Complete Survey →</a>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     SCREEN 6 — COMPLETE
+════════════════════════════════════════════ -->
+<div class="screen" id="s-complete">
+  <div class="prog-bar"><div class="prog-fill" style="width:100%"></div></div>
+  <div class="screen-body centered">
+    <div class="complete-icon">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="13" fill="#E1F5EE"/>
+        <path d="M10 16.5l4 4 8-8" stroke="#0F6E56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <p class="overline">Survey Complete</p>
+    <h2 class="title-lg">Thank you for completing the survey.</h2>
+    <p class="body-sm" style="margin-top:10px;">
+      All responses are recorded. Use <strong>Print / Save PDF</strong> to create a copy to share with your care provider. Every selection you made will appear highlighted in the printed version.
+    </p>
+    <div class="complete-note">
+      <strong>To save as PDF:</strong> Click the button below → in the print dialog, choose <em>Save as PDF</em> as the destination. All four sections with your selections will be included.
+    </div>
+  </div>
+  <div class="screen-footer two-col">
+    <a href="#s-welcome" class="btn-secondary">Start Over</a>
+    <a href="#" onclick="window.print();return false;" class="btn-primary">Print / Save PDF</a>
+  </div>
+</div>
+
+</body>
+</html>
